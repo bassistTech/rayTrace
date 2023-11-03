@@ -305,6 +305,36 @@ def propagate_plane_grating(ray_table, en, ex, surface, ray_properties):
                               + np.outer(exy, surface["y_axis"])
                               + np.outer(exz, surface["z_axis"]))
 
+def propagate_plane_grating_2(ray_table, en, ex, surface, ray_properties):
+    """
+    ray_table = [surf, ray, type, point (type=0) or vector (type=1)]
+    
+    # https://www.phys.uconn.edu/~eyler/phys4150/R/OSLO%20Optics%20Reference.pdf
+    """
+
+    ray_table[ex, :, 0, :] = intersect_line_plane_array(
+        surface["origin"], surface["z_axis"],
+        ray_table[en, :, 0, :], ray_table[en, :, 1, :])
+
+    # three arrays of scalars in coordinates local to the surface
+
+    exx = (
+        surface["n1"] * np.dot(ray_table[en, :, 1, :], surface["x_axis"])
+        + surface["m"] * ray_properties['wavl'] / surface["d"]
+    ) / surface["n2"]
+
+    exy = surface["n1"] * np.dot(ray_table[en, :, 1, :],
+                                 surface["y_axis"]) / surface["n2"]
+
+    exz = np.sqrt(1 - exx*exx - exy*exy)
+
+    # convert to a vector in global coordinates
+
+    ray_table[ex, :, 1, :] = (np.outer(exx, surface["x_axis"])
+                              + np.outer(exy, surface["y_axis"])
+                              + np.outer(exz, surface["z_axis"]))
+
+
 
 def propagate_ray(ray_table, ray_properties, geometry):
     """
@@ -321,6 +351,8 @@ def propagate_ray(ray_table, ray_properties, geometry):
             propagate_cylindrical_surface(ray_table, i-1, i, g)
         elif g["surf"] == "plane grating":
             propagate_plane_grating(ray_table, i-1, i, g, ray_properties)
+        elif g["surf"] == "plane grating 2":
+            propagate_plane_grating_2(ray_table, i-1, i, g, ray_properties)
         else:
             print("Did not recognize surface type", g["surf"])
 
@@ -348,7 +380,7 @@ def plot_faces(axd, surface_list):
 
         # generate drawing curves in local coordinates of object
         match s["surf"]:
-            case ("dummy" | "plane_grating" | "rotate" | "shift"):
+            case ("dummy" | "plane grating" | "plane grating 2" | "rotate" | "shift"):
                 zxa = np.zeros_like(ra)
                 zya = zxa
             case "conic":

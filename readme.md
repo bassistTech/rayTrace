@@ -1,6 +1,6 @@
 # Python Ray Tracing Project
 
-Francis Deck, 1-7-2023
+Francis Deck, 11-2-2023
 
 ## Subject matter
 
@@ -10,12 +10,12 @@ This is ray tracing for modeling and analyzing optical designs such as lenses, m
 
 ## Purpose
 
-This project started as a mental exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. My goal is to find and document *exact* methods of tracing rays in 3d. And then, test my understanding by coding it and see if it works. In the future, I might use it to try out some unconventional design ideas for fun.
+This project started as a learning exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. My goal is to find and document the formulas for optical ray tracing. And then, test my understanding by coding it and see if it works. In the future, I might use it to try out some unconventional design ideas for fun.
 
 I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. By day, I use one of those programs, and am perfectly happy with it.
 
 ## What it does so far
-* "Standard" conic section surface, which includes the spherical surface as a special case
+* "Standard" conic section surface, which includes the spherical surface as a special case, and a cylindrical version
 * Refraction and reflection
 * Plane diffraction grating
 * Coordinate breaks
@@ -26,11 +26,11 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 * Demonstrate optimization
 
 ## My evaluation so far
-Since I use one of the "big" commercial packages, it's easy to identify pro's and con's versus the my own "package." The commercial packages still have two outstanding advantages that would be hard to live without:
+Since I use one of the "big" commercial packages at my day job, it's easy to identify pro's and con's versus the my own "package." The commercial packages still have some outstanding advantages that would be hard to live without:
 
 * Computation speed. Analyses of any complexity require tracing *lots* of rays. This is important for optimization, which is a super power when it comes to optics design.
 
-* Proliferation of features. The sheer number of these calculations embodies years of effort. Some of them incorporate domain knowledge that I don't possess, either because it's proprietary or I haven't learned it yet. If you want to add them to my package, you have to program them yourself.
+* Proliferation of features. The sheer number of these features embodies years of effort. Some of them incorporate domain knowledge that I don't possess, either because it's proprietary or I haven't learned it yet. If you want to add them to my package, you have to program them yourself. Programming could easily end up taking more time than designing.
 
 * GUI, as in, None.
 

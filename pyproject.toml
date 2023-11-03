@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "opticsRayTrace"
 version = "0.0.1"
-description = "A small example package"
+description = "Optical ray tracing tools"
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
