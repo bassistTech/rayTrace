@@ -377,6 +377,10 @@ def plot_faces(axd, surface_list):
         ra = np.linspace(-s["draw_radius"], s["draw_radius"], npts)
         xa = ra + s["draw_dx"]
         ya = ra + s["draw_dy"]
+        if "label" in s:
+            label = s['label']
+        else:
+            label = None
 
         # generate drawing curves in local coordinates of object
         match s["surf"]:
@@ -395,7 +399,7 @@ def plot_faces(axd, surface_list):
             for i in range(npts):
                 x[i, :] = s["origin"] + xa[i] * \
                     s["x_axis"] + zxa[i] * s["z_axis"]
-            axd["axs"][axd["x"]].plot(x[:, 2], x[:, 0], linewidth=1)
+            axd["axs"][axd["x"]].plot(x[:, 2], x[:, 0], linewidth=1, label = label)
             axd["axs"][axd["x"]].set_ylabel("X (mm)")
 
         # second graph shows the z-y coordinate axis in global space
@@ -403,7 +407,7 @@ def plot_faces(axd, surface_list):
             for i in range(npts):
                 x[i, :] = s["origin"] + ya[i] * \
                     s["y_axis"] + zya[i] * s["z_axis"]
-            axd["axs"][axd["y"]].plot(x[:, 2], x[:, 1], linewidth=1)
+            axd["axs"][axd["y"]].plot(x[:, 2], x[:, 1], linewidth=1, label = label)
             axd["axs"][axd["y"]].set_ylabel("Y (mm)")
         axd["axs"][-1].set_xlabel("Z (mm)")
 
