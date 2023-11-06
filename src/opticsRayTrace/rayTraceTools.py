@@ -8,6 +8,8 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 
+epsilon = 1e-3
+
 
 def norm_vec(v):
     """
@@ -50,6 +52,8 @@ sag_conic_diff_sp = sp.simplify(sp.diff(sag_conic_sp, r)/r)
 sag_conic = sp.lambdify([r, c, k], sag_conic_sp, 'numpy')
 sag_conic_diff = sp.lambdify([r, c, k], sag_conic_diff_sp, 'numpy')
 
+#def sag_conic(r, c, k):
+#    return c*r*r/(1 + np.sqrt(1 - (1 + k)*c*c*r*r))
 
 def distance_point_line(a, n, p):
     """
@@ -205,9 +209,10 @@ def propagate_conic_surface(ray_table, en, ex, surface):
     """
     ray_table = [surf, ray, type, point (type=0) or vector (type=1)]
     """
-    # first step is intersecting the input ray with the curved surface
+    # first step is intersecting the input ray with the curved surface:
     sag = np.zeros([ray_table.shape[1]])
-    for k in range(10):
+    # TODO: Handle zero curvature by bypassing this loop
+    for k in range(40):
         ray_table[ex, :, 0, :] = intersect_line_plane_array(
             surface["origin"] + np.outer(sag, surface["z_axis"]), surface["z_axis"],
             ray_table[en, :, 0, :], ray_table[en, :, 1, :])
@@ -215,18 +220,16 @@ def propagate_conic_surface(ray_table, en, ex, surface):
             surface["origin"],
             surface["z_axis"],
             ray_table[ex, :, 0, :])
-        sag = sag_conic(r, surface["c"], surface["k"])
+        sagnew = sag_conic(r, surface["c"], surface["k"])
+        sigma = np.max(np.abs(sagnew - sag))
+        sag = sagnew
+        if sigma < epsilon:
+            break
 
     # second step is finding surface normal on the exit surface
     sd = sag_conic_diff(r, surface['c'], surface['k'])
-    # d_sag_d_r2(r, surface["c"], surface["k"])
     x = np.dot(ray_table[ex, :, 0, :] - surface["origin"], surface["x_axis"])
     y = np.dot(ray_table[ex, :, 0, :] - surface["origin"], surface["y_axis"])
-
-    # n = normalize(  # array of vectors
-    #    np.outer(2*x*sd, surface["x_axis"])
-    #    + np.outer(2*y*sd, surface["y_axis"])
-    #    - surface["z_axis"])
 
     n = normalize_vec_array(np.outer(sd*x, surface['x_axis'])
                             + np.outer(sd*y, surface['y_axis'])
@@ -300,6 +303,7 @@ def propagate_plane_grating(ray_table, en, ex, surface, ray_properties):
     exz = np.sqrt(1 - exx*exx - exy*exy)
 
     # convert to a vector in global coordinates
+    # TODO: Why doesn't np.dot work here? Make sure not a hidden bug
 
     ray_table[ex, :, 1, :] = (np.outer(exx, surface["x_axis"])
                               + np.outer(exy, surface["y_axis"])
@@ -333,8 +337,6 @@ def propagate_plane_grating_2(ray_table, en, ex, surface, ray_properties):
     ray_table[ex, :, 1, :] = (np.outer(exx, surface["x_axis"])
                               + np.outer(exy, surface["y_axis"])
                               + np.outer(exz, surface["z_axis"]))
-
-
 
 def propagate_ray(ray_table, ray_properties, geometry):
     """
@@ -442,6 +444,22 @@ def ray_table_from_fields_points(geometry, field_points, pupil_points):
                 pupil_points[j] - field_points[i])
     return ray_table
 
+def new_ray_table(geometry, field_points, pupil_points, wavls):
+    nrays = len(field_points)*len(pupil_points)*len(wavls)
+    ray_table = np.empty([len(geometry), nrays, 2, 3])
+    ray_properties = {'wavl': np.empty(nrays),
+                      'wavn': np.empty(nrays, dtype = int)}
+    mg = np.array(np.meshgrid(range(len(field_points)), range(len(pupil_points)), range(len(wavls)))).T.reshape(-1,3)
+    # https://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays
+    
+    for i in range(ray_table.shape[1]):
+        j, k, m = mg[i]
+        ray_table[0, i, 0, :] = field_points[j]
+        v = pupil_points[k] - field_points[j]
+        ray_table[0, i, 1, :] = normalize_vec(v)
+        ray_properties['wavl'][i] = wavls[m]
+        ray_properties['wavn'][i] = m
+    return ray_table, ray_properties
 
 def plot_rays(axd, geometry, ray_table, ray_properties, **kwargs):
     keep = [s['draw_radius'] != 0 for s in geometry]
