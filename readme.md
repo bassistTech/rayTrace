@@ -21,7 +21,6 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 * Coordinate breaks
 
 ## Immediate plans
-* Handling the basic properties of glass
 * Demonstrate a reasonably complex example
 * Demonstrate an analysis
 * Demonstrate optimization
