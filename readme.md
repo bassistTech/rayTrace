@@ -10,7 +10,7 @@ This is ray tracing for modeling and analyzing optical designs such as lenses, m
 
 ## Purpose
 
-This project started as a learning exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. My goal is to find and document the formulas for optical ray tracing. And then, test my understanding by coding it and see if it works. In the future, I might use it to try out some unconventional design ideas for fun.
+This project started as a learning exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. And then, test my understanding by coding it and see if it works. In the future, I might use it to try out some unconventional design ideas for fun.
 
 I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. By day, I use one of those programs, and am perfectly happy with it.
 
@@ -35,6 +35,18 @@ Since I use one of the "big" commercial packages at my day job, it's easy to ide
 * GUI, as in, None.
 
 As I mentioned, optimization is a super-power. So my package can make simple diagrams that illustrate principles, but is actually quite weak for serious design.
+
+## Overview of contents
+
+**Entire repo** can be installed as a Python package on your machine using:
+	
+	git clone https://github.com/bassistTech/rayTrace.git
+	cd rayTrace
+	pip install -e .
+	
+The **-e** flag causes pip to install the package without moving it into your Python directory, so you can keep editing all of the files.
+
+**Docs** are notebooks that document the theory and evolution of the program. **rayTraceSlow.ipynb** was the original notebook, but is written in mostly bare Python, so it's slow, but perhaps
 
 ## Bibliography of existing packages
 
