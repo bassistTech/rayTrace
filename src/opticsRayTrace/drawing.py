@@ -1,0 +1,142 @@
+'''
+Drawing functions for ray trace tools
+Francis Deck 10-4-2023
+MIT License
+'''
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+import opticsRayTrace.rayTraceTools as rtt
+
+
+def new_plot_xy(axes=["x", "y"], **kwargs):
+    # axes is an optional list of axes that you actually want to plot
+    fig, axs = plt.subplots(len(axes), 1, sharex="col", sharey="row", **kwargs)
+    # resolve fact that plt.subplots returns either a scalar axs or a list
+    # depending on number of axes. We want always a list for consistency
+    # later on.
+    if len(axes) == 1:
+        return {"fig": fig, "axs": [axs]} | {axes[i]: i for i in range(len(axes))}
+    else:
+        return {"fig": fig, "axs": axs} | {axes[i]: i for i in range(len(axes))}
+
+
+def axdPlotGeneral(ax, x, h_axis, v_axis):
+    '''
+    General plot of 3d data projected onto 2d plane
+
+    x = list of points in space
+    h_axis = horizontal axis vector
+    v_axis = vertical axis vector
+    '''
+
+    ha = np.sum(x*rtt.normalize_vec(h_axis), axis=1)
+    va = np.sum(x*rtt.normalize_vec(v_axis), axis=1)
+    ax.plot(ha, va)
+
+
+def axdPlot(x, axd, label):
+    '''
+    Based on axis list, generate one of 3 kinds of plots
+    '''
+
+    # first graph shows the z-x coordinate axis in global space
+    if "x" in axd:
+        axdPlotGeneral(axd["axs"][axd["x"]], x, np.array([0, 0, 1]), np.array([1, 0, 0]))
+
+    # second graph shows the z-y coordinate axis in global space
+    if "y" in axd:
+        axdPlotGeneral(axd["axs"][axd["y"]], x, np.array([0, 0, 1]), np.array([0, 1, 0]))
+
+    if "3d" in axd:
+        '''
+        Form coordinates, then rotate in 2 directions to form basis
+        for graph
+        '''
+        v1a = np.array([0, 0, 1])
+        v2a = np.array([1, 0, 0])
+
+        v1b = rtt.coord_rotate(v1a, [0, 1, 0], 30)
+        v2b = rtt.coord_rotate(v2a, [0, 1, 0], 30)
+
+        v1c = rtt.coord_rotate(v1b, [1, 0, 0], 30)
+        v2c = rtt.coord_rotate(v2b, [1, 0, 0], 30)
+
+        axdPlotGeneral(axd["axs"][axd["3d"]], x, v1c, v2c)
+
+    axd["axs"][-1].set_xlabel("Z (mm)")
+
+    [ax.set_aspect("equal") for ax in axd["axs"]]
+
+
+def plot_faces(axd, surface_list):
+    '''
+    axd = axis dictionary, containing figure and axes
+    surface_list is from build_geometry
+    '''
+
+    npts = 50
+    x = np.empty((npts, 3))
+
+    for s in surface_list:
+        if "label" in s:
+            label = s['label']
+        else:
+            label = None
+
+        # create (for now) circular aperture in local coordinates
+        theta_ring = np.linspace(0, 2*np.pi, npts)
+        x_ring = s["draw_radius"]*np.sin(theta_ring)
+        y_ring = s["draw_radius"]*np.cos(theta_ring)
+
+        # create x or y bar in local coordinates
+        bar = np.linspace(-s["draw_radius"], s["draw_radius"], npts)
+
+        # generate drawing curves in local coordinates of object
+        match s["surf"]:
+            case ("dummy" | "plane grating" | "plane grating 2" | "rotate" | "shift" | "paraxial"):
+                sag_ring = np.zeros((npts))
+                sag_xbar = np.zeros((npts))
+                sag_ybar = np.zeros((npts))
+
+            case "conic":
+                r_ring = np.ones_like(x_ring)*s["draw_radius"]
+                sag_ring = rtt.sag_conic(r_ring, s["c"], s["k"])
+                sag_xbar = rtt.sag_conic(bar, s["c"], s["k"])
+                sag_ybar = sag_xbar
+
+            case "cylindrical":
+                sag_ring = rtt.sag_conic(y_ring, s["c"], s["k"])
+                sag_xbar = np.zeros((npts))
+                sag_ybar = rtt.sag_conic(bar, s["c"], s["k"])
+
+        for i in range(npts):
+            x[i, :] = (s["origin"]
+                       + x_ring[i]*s["x_axis"]
+                       + y_ring[i]*s["y_axis"]
+                       + sag_ring[i]*s["z_axis"])
+
+        axdPlot(x, axd, label)
+
+        for i in range(npts):
+            x[i, :] = (s["origin"]
+                       + bar[i]*s["x_axis"]
+                       + sag_xbar[i]*s["z_axis"])
+
+        axdPlot(x, axd, None)
+
+        for i in range(npts):
+            x[i, :] = (s["origin"]
+                       + bar[i]*s["y_axis"]
+                       + sag_ybar[i]*s["z_axis"])
+
+        axdPlot(x, axd, None)
+
+
+def plot_rays(axd, geometry, ray_table, **kwargs):
+    keep = [s['draw_radius'] != 0 for s in geometry]
+    for i in range(ray_table.shape[1]):
+        x = ray_table[:, i, 0, :][keep]
+        axdPlot(x, axd, 'x')
+    return

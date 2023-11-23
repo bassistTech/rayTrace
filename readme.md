@@ -16,6 +16,7 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 
 ## What it does so far
 * "Standard" conic section surface, which includes the spherical surface as a special case, and a cylindrical version
+* "Paraxial" surface
 * Refraction and reflection
 * Plane diffraction grating
 * Coordinate breaks
@@ -61,3 +62,7 @@ https://github.com/quartiq/rayopt is three-dimensional tracing. I started diggin
 https://github.com/mess42/pyrate seems worth looking into. Hard to figure out from the repo what it is and does.
 
 https://github.com/rfrazier716/PyRayT looks promising, but is preliminary. I'm going to keep my eye on this.
+
+https://github.com/chbergmann/OpticsWorkbench is a ray tracing add-on for FreeCAD. I haven't explored it at all, but I like the concept.
+
+https://tmurphy.physics.ucsd.edu/astr597/exercises/raytrace-3d.pdf has a closed form solution for the intersection of a ray and a conic section surface, with Python example code.
