@@ -151,20 +151,25 @@ def coord_shift(x, dx):
 
 def build_geometry(surface_list):
     """
-    Turn surface list into a "geometry" which includes the absolute coordinates and
-    orientations of the surfaces, and other properties including defaults to support
-    ray tracing. Properties not dealt with here will be simply passed on from the
-    surface list.
+    For convenience and similarity to commercial programs, the surface list specifies the
+    positions of the elements in _relative_ terms. This function gives each surface a
+    position and orientation within the global coordinate space.
+
+    It also applies defaults to the surfaces, mainly just to keep my programs from blowing
+    up if a property is omitted.
     """
+
     def apply_defaults(d, defaults):
         return d | {k: defaults[k] for k in defaults if k not in d}
 
     geometry_defaults = {"dist": 0,
+                         "draw": True,
                          "draw_radius": 10,
                          "draw_dx": 0,
                          "draw_dy": 0,
                          "mirror": False,
-                         "material": "vacuum"}
+                         "material": "vacuum",
+                         "c": 0, "k": 0}
 
     # This is the coordinate basis that will be cumulatively updated at each surface
     origin = np.array((0, 0, 0))
@@ -179,6 +184,7 @@ def build_geometry(surface_list):
         if g['material'] == 'vacuum':
             g['glass_coeffs'] = np.array((0, 0, 0, 0, 0, 0))
         else:
+            # For now, just use the 6 coefficient model, which only works for visible wavelengths.
             g['glass_coeffs'] = load_glass(g['material'])['coeffs']
         if g["surf"] == "rotate":
             x_axis = coord_rotate(x_axis, g["axis"], g["degrees"])
@@ -203,7 +209,8 @@ def build_geometry(surface_list):
     return geometry
 
 
-help_ray_table = """
+def ray_table():
+    """
     ray_table[surf #, ray #, type #, data]
     type = 0
         data = intersection point of ray in space
@@ -214,6 +221,7 @@ help_ray_table = """
     type = 3
         data = [field #, pupil #, wavelength #]
     """
+    pass
 
 
 def fields(ray_table):
@@ -507,26 +515,33 @@ def propagate_paraxial(ray_table, geometry, surf):
 
 def propagate_ray(ray_table, geometry):
     """
-    ray_table = [surf, ray, type, p (type=0), v (type=1), [n w _] (type=2)]
+    Propagate rays through the system. This is the main ray tracing function.
+
+    The outer loop iterates through the geometry, rather than through the rays, for speed,
+    since each propagate function acts on all of the rays at once for a given surface type.
     """
+
     # No tracing to first surface, so we start with index 1
     for i in range(1, len(geometry)):
-        g = geometry[i]
-        if g["surf"] in ["rotate", "shift", "dummy"]:
-            propagate_dummy_surface(ray_table, geometry, i)
-        elif g["surf"] == "conic":
-            propagate_conic_surface(ray_table, geometry, i)
-        elif g["surf"] == "cylindrical":
-            propagate_cylindrical_surface(ray_table, geometry, i)
-        elif g["surf"] == "plane grating":
-            propagate_plane_grating(ray_table, geometry, i)
-        elif g["surf"] == "plane grating 2":
-            propagate_plane_grating_2(ray_table, geometry, i)
-        elif g["surf"] == "paraxial":
-            propagate_paraxial(ray_table, geometry, i)
-        else:
-            print("Did not recognize surface type", g["surf"])
+        match geometry[i]["surf"]:
+            case ("rotate" | "shift" | "dummy"):
+                propagate_dummy_surface(ray_table, geometry, i)
+            case "conic":
+                propagate_conic_surface(ray_table, geometry, i)
+            case "cylindrical":
+                propagate_cylindrical_surface(ray_table, geometry, i)
+            case "plane grating":
+                propagate_plane_grating(ray_table, geometry, i)
+            case "plane grating 2":
+                propagate_plane_grating_2(ray_table, geometry, i)
+            case "paraxial":
+                propagate_paraxial(ray_table, geometry, i)
+            case _:
+                print("Did not recognize surface type", geometry[i]["surf"])
+
+        # Propagate ray origin data through the entire table
         ray_table[i, :, 3, :] = ray_table[i - 1, :, 3, :]
+        ray_table[i, :, 2, 1] = ray_table[i - 1, :, 2, 1]
 
 
 def print_ray_table(ray_table):
