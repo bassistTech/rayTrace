@@ -12,6 +12,8 @@ This is ray tracing for modeling and analyzing optical designs such as lenses, m
 
 This project started as a learning exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. And then, test my understanding by coding it and see if it works. In the future, I might use it to try out some unconventional design ideas for fun.
 
+At some point it became obvious that keeping all of the code in notebooks was awkward. I moved the "guts" of the ray tracing code to a more traditional Python package.
+
 I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. By day, I use one of those programs, and am satisfied with it.
 
 ## What it does so far
@@ -20,7 +22,8 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 * Refraction and reflection
 * Plane diffraction grating
 * Coordinate breaks
-* Optimization, but it's klunky
+* Crude ray aiming
+* Optimization
 
 ## Immediate plans
 * Demonstrate more stuff
@@ -47,11 +50,11 @@ Since I use one of the "big" commercial packages at my day job, it's easy to ide
 	cd rayTrace
 	pip install -e .
 
-The **-e** flag causes pip to install the package without moving it into your Python directory, so you can keep editing all of the files. I'd be surprised if you could use my package right now for anything interesting without forking it.
+The **-e** flag causes pip to install the package without moving it into your Python directory, so you can keep editing all of the files. I'd be surprised if you could use my package right now for anything interesting without forking it, so it doesn't really belong in your *site-packages*.
 
-**Docs** are notebooks that document the theory and evolution of the program, but are not meant for long term use, and are not kept up to date with changes to the library. **rayTraceSlow.ipynb** was the original notebook, but is written in mostly bare Python, so it's slow, but perhaps easier to read. The transition to array math using numpy can be a bit abrupt for a beginning programmer. **rayTrace.ipynb** is more or less the same program, but shows the transition to numpy.
+**Docs** are notebooks that document the theory and evolution of the program, but are not meant for long term use, and are not kept up to date with changes to the library. You can think of these notebooks as my lab notebooks, through which I developed the primitive code. **rayTraceSlow.ipynb** was the original notebook, but is written in mostly bare Python, so it's slow, but perhaps easier to read. The transition to array math using numpy can be a bit abrupt for a beginning programmer. **rayTrace.ipynb** is more or less the same program, but shows the transition to numpy.
 
-**Notebooks** are projects and tests based on the Python library.
+**Notebooks** are projects and tests using the Python package.
 
 ## Bibliography of existing packages
 

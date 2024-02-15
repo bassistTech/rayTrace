@@ -5,12 +5,14 @@ MIT License
 '''
 
 import numpy as np
-from scipy.optimize import minimize
 import sympy as sp
-import yaml
+import time
 import os
+import yaml
 
-epsilon = 1e-3
+
+epsilon = 1e-4
+maxiter = 10
 
 
 def norm_vec(v):
@@ -107,8 +109,9 @@ def intersect_line_plane_array(x_surf, n_surf, x_linea, v_line):
     https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
     """
 
-    nps = (np.sum((x_surf-x_linea) * n_surf, axis=1) / np.sum(v_line*n_surf, axis=1))[:, np.newaxis]
-    return x_linea + v_line * nps
+    dist = (np.sum((x_surf-x_linea) * n_surf, axis=1)
+            / np.sum(v_line*n_surf, axis=1))[:, np.newaxis]
+    return x_linea + v_line * dist
 
 
 def rotate_matrix(axis, alpha_deg):
@@ -261,6 +264,22 @@ def find_stop(geometry):
 
 
 def pupil_shift(field, aim_consts):
+    """
+    I accomplish basic ray aiming by applying a linear transformation to each pupil point.
+    The apparent "mixing" of the 0 and 1 (x and y) coordinates allows for ray aiming through
+    systems that have coordinate transformations. The 3 (Z) coordinate is left alone.
+
+    A single set of constants is applied across the entire ray table, and these constants
+    also become the optimization parameters for minimizing the centroid of the ray bundle
+    through the pupil surface.
+
+    I don't know how the commercial programs do ray aiming, but I needed to have *something*
+    to support basic ray tracing and optimization.
+
+    field = a field point to be aimed
+    aim_consts = linear transformation applied to this field point
+    returns: Transformed field point
+    """
     a, b, c, d, e, f = aim_consts
     return np.array([a + b*field[0] + c*field[1],
                      d + e*field[0] + f*field[1],
@@ -284,7 +303,7 @@ def new_ray_table(geometry, fields, pupils, wavls, infinite,
         aim_consts = np.zeros((6))
 
     '''
-    Work through every combination of a field, pupil, and wavelength
+    Work through every possible combination of a field, pupil, and wavelength
     '''
 
     i = 0
@@ -292,14 +311,19 @@ def new_ray_table(geometry, fields, pupils, wavls, infinite,
         for k in range(len(pupils)):
             for m in range(len(wavls)):
                 if infinite:
-                    # fields are vectors by the calling function
-                    ray_table[0, i, 1, :] = normalize_vec(fields[j])
-                    # pupils are points at the entrance surface
+                    '''
+                    When the light source is considered to be at infinity, fields are vectors,
+                    and pupils are points on the entrance surface, optionally modified by
+                    ray aiming.
+                    '''
                     ray_table[0, i, 0, :] = pupils[k] + pupil_shift(fields[j], aim_consts)
+                    ray_table[0, i, 1, :] = normalize_vec(fields[j])
                 else:
-                    # fields are positions at the entrance surface
+                    '''
+                    When the light source is at a finite distance, fields are points on the
+                    source surface, and pupils are points in space.
+                    '''
                     ray_table[0, i, 0, :] = fields[j]
-                    # incoming ray angle is found by tracing from field point to pupil point
                     ray_table[0, i, 1, :] = normalize_vec(pupils[k]
                                                           + pupil_shift(fields[j], aim_consts)
                                                           - fields[j])
@@ -341,7 +365,6 @@ def propagate_conic_surface(ray_table, geometry, surf):
     surface = geometry[surf]
     # first step is intersecting the input ray with the curved surface:
     sag = np.zeros([ray_table.shape[1]])
-    # TODO: Handle zero curvature by bypassing this loop
     for k in range(40):
         ray_table[surf, :, 0, :] = intersect_line_plane_array(
             surface["origin"] +
@@ -550,6 +573,7 @@ def trace_rays(ray_table, geometry):
     """
 
     # No tracing to first surface, so we start with index 1
+    t0 = time.time()
     for i in range(1, len(geometry)):
         match geometry[i]["surf"]:
             case ("rotate" | "shift" | "dummy"):
@@ -570,6 +594,7 @@ def trace_rays(ray_table, geometry):
         # Propagate ray origin data through the entire table
         ray_table[i, :, 3, :] = ray_table[i - 1, :, 3, :]
         ray_table[i, :, 2, 1] = ray_table[i - 1, :, 2, 1]
+        geometry[i]['time'] = time.time() - t0
 
 
 def print_ray_table(ray_table):
