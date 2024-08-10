@@ -73,3 +73,7 @@ https://github.com/rfrazier716/PyRayT looks promising, but is preliminary. I'm g
 https://github.com/chbergmann/OpticsWorkbench is a ray tracing add-on for FreeCAD. I haven't explored it at all, but I like the concept.
 
 https://tmurphy.physics.ucsd.edu/astr597/exercises/raytrace-3d.pdf has a closed form solution for the intersection of a ray and a conic section surface, with Python example code.
+
+## Other references
+
+https://raytracing.github.io/books/RayTracingInOneWeekend.html is a book on ray tracing, for computer graphics. I'll be looking through it for insights on how I could speed up my program, since graphics tend to be quite performance intensive.

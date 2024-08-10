@@ -9,6 +9,7 @@ import sympy as sp
 from time import time
 import os
 import yaml
+from numba import jit
 
 
 epsilon = 1e-4
@@ -49,20 +50,13 @@ Use Sympy to create the sag functions for conic section (standard) surfaces,
 then turn them into Python functions using numpy math.
 """
 
-#r, c, k = sp.symbols('r c k')
+r, c, k = sp.symbols('r c k')
 
-#sag_conic_sp = c*r**2/(1 + sp.sqrt(1 - (1 + k)*c**2*r**2))
-#sag_conic_diff_sp = sp.simplify(sp.diff(sag_conic_sp, r)/r)
+sag_conic_sp = c*r**2/(1 + sp.sqrt(1 - (1 + k)*c**2*r**2))
+sag_conic_diff_sp = sp.simplify(sp.diff(sag_conic_sp, r)/r)
 
-#sag_conic = sp.lambdify([r, c, k], sag_conic_sp, 'numpy')
-#sag_conic_diff = sp.lambdify([r, c, k], sag_conic_diff_sp, 'numpy')
-
-def sag_conic(r, c, k):
-    return c*r**2/(np.sqrt(-c**2*r**2*(k + 1) + 1) + 1)
-
-def sag_conic_diff(r, c, k):
-    u = np.sqrt(-c**2*r**2*(k + 1) + 1)
-    return c*(c**2*r**2*(k + 1) + 2*u*(u + 1))/(u*(u + 1)**2)
+sag_conic = sp.lambdify([r, c, k], sag_conic_sp, 'numpy')
+sag_conic_diff = sp.lambdify([r, c, k], sag_conic_diff_sp, 'numpy')
 
 
 def distance_point_line(a, n, p):
@@ -104,6 +98,20 @@ def intersect_line_plane(x_surf, n_surf, x_line, v_line):
 
     return (x_line + v_line * npd1/npd2)
 
+def intersect_line_plane_numba(x_surf, n_surf, x_line, v_line, ret_val):
+    """
+    intersection of line and plane, possibly not used right now
+    x_surf = point on plane
+    n_surf = normal to plane
+    x_line = point on line
+    v_line = direction vector of line
+
+    https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+    """
+    npd1 = np.dot((x_surf - x_line), n_surf)
+    npd2 = np.dot(v_line, n_surf)
+    ret_val = x_line + v_line * npd1/npd2
+
 
 def intersect_line_plane_array(x_surf, n_surf, x_linea, v_line):
     """
@@ -111,7 +119,7 @@ def intersect_line_plane_array(x_surf, n_surf, x_linea, v_line):
     x_surf = point on plane
     n_surf = normal to plane
     x_line = [point on line]
-    v_line = [direction vector of line]
+    v_line = direction vector of line
 
     https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
     """
@@ -184,10 +192,10 @@ def build_geometry(surface_list):
                          "R": None}
 
     # This is the coordinate basis that will be cumulatively updated at each surface
-    origin = np.array((0, 0, 0))
-    x_axis = np.array((1, 0, 0))
-    y_axis = np.array((0, 1, 0))
-    z_axis = np.array((0, 0, 1))
+    origin = np.array((0, 0, 0), dtype = float)
+    x_axis = np.array((1, 0, 0), dtype = float)
+    y_axis = np.array((0, 1, 0), dtype = float)
+    z_axis = np.array((0, 0, 1), dtype = float)
 
     # Run through the surfaces, applying the coordinate basis to each surface
     geometry = []
@@ -234,8 +242,6 @@ help_ray_table = """
         data = [refractive index, wavelength, <reserved>]
     type = 3
         data = [field #, pupil #, wavelength #]
-    type = 4
-        data = [sag, ...]
     """
 
 
@@ -309,7 +315,7 @@ def new_ray_table(geometry, fields, pupils, wavls, infinite,
     ray_table = np.zeros([len(geometry), nrays, 4, 3])
 
     if aim_consts is None:
-        aim_consts = np.zeros((6))
+        aim_consts = np.zeros((6), dtype = float)
 
     '''
     Work through every possible combination of a field, pupil, and wavelength
@@ -372,6 +378,42 @@ def propagate_dummy_surface(ray_table, geometry, surf):
     ray_table[surf, :, 1, :] = ray_table[surf-1, :, 1, :]
 
 
+def compute_sags_conic_surface_deprecated(ray_table, surf, origin, z_axis, c, k, r, sag):
+    for iter in range(40):
+        ray_table[surf, :, 0, :] = intersect_line_plane_array(
+            origin + np.outer(sag, z_axis), 
+            z_axis,
+            ray_table[surf-1, :, 0, :], # position of previous ray
+            ray_table[surf-1, :, 1, :]) # direction of previous ray
+        r[:] = distance_point_line_array(
+            origin,
+            z_axis,
+            ray_table[surf, :, 0, :])
+        sagnew = sag_conic(r, c, k)
+        sigma = np.max(np.abs(sagnew - sag))
+        sag[:] = sagnew
+        if sigma < epsilon:
+            break
+
+@jit(nopython = True)
+def compute_sags_conic_surface(ray_table, surf, origin, z_axis, c, k, r, sag):
+    for j in range(ray_table.shape[1]):
+        sag[j] = 0
+        for iter in range(40):
+            intersect_line_plane_numba(
+                origin + sag[j]*z_axis, 
+                z_axis,
+                ray_table[surf-1, j, 0, :], # position of previous ray
+                ray_table[surf-1, j, 1, :], # direction of previous ray
+                ray_table[surf, j, 0, :])
+            r[j] = distance_point_line(
+                origin,
+                z_axis,
+                ray_table[surf, j, 0, :])
+            sagnew = sag_conic(r[j], c, k)
+            if np.abs(sagnew - sag[j]) < epsilon:
+                break
+
 def propagate_conic_surface(ray_table, geometry, surf):
     """
     ray_table = [surf, ray, type, p (type=0), v (type=1), [n w _] (type=2)]
@@ -379,23 +421,15 @@ def propagate_conic_surface(ray_table, geometry, surf):
     t0 = time()
     surface = geometry[surf]
     # first step is intersecting the input ray with the curved surface:
-    # sag = np.zeros([ray_table.shape[1]])
     sag = np.zeros([ray_table.shape[1]])
-    for k in range(40):
-        ray_table[surf, :, 0, :] = intersect_line_plane_array(
-            surface["origin"] + np.outer(sag, surface["z_axis"]), 
-            surface["z_axis"],
-            ray_table[surf-1, :, 0, :], # position of previous ray
-            ray_table[surf-1, :, 1, :]) # direction of previous ray
-        r = distance_point_line_array(
-            surface["origin"],
-            surface["z_axis"],
-            ray_table[surf, :, 0, :])
-        sagnew = sag_conic(r, surface["c"], surface["k"])
-        sigma = np.max(sagnew - sag)
-        sag = sagnew
-        if sigma < epsilon:
-            break
+    r = np.zeros_like(sag)
+    origin = surface["origin"]
+    z_axis = surface["z_axis"]
+    c = surface["c"]
+    k = surface["k"]
+
+    compute_sags_conic_surface(ray_table, surf, origin, z_axis, c, k, r, sag)
+
     times = [time() - t0]
     # second step is finding surface normal on the exit surface
     sd = sag_conic_diff(r, surface['c'], surface['k'])
