@@ -39,9 +39,6 @@ def _axdPlotGeneral(ax, x, h_axis, v_axis, color, **kwargs):
 
     ha = np.sum(x*rtt.normalize_vec(h_axis), axis=1)
     va = np.sum(x*rtt.normalize_vec(v_axis), axis=1)
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    if color is not None:
-        color = colors[color % len(colors)]
     ax.plot(ha, va, c=color, **kwargs)
 
 
@@ -79,8 +76,12 @@ def _axdPlot(x, axd, label, color, **kwargs):
         v1c = rtt.coord_rotate(v1b, [1, 0, 0], 30)
         v2c = rtt.coord_rotate(v2b, [1, 0, 0], 30)
 
-        _axdPlotGeneral(axd["axs"][axd["3d"]], x, v1c, v2c,
+        v1d = rtt.coord_rotate(v1c, [0, 0, 1], -10)
+        v2d = rtt.coord_rotate(v2c, [0, 0, 1], -10)
+
+        _axdPlotGeneral(axd["axs"][axd["3d"]], x, v1d, v2d,
                         color, **kwargs)
+        
     axd["axs"][-1].set_xlabel('Z (mm)')
 
     [ax.set_aspect("equal") for ax in axd["axs"]]
@@ -137,21 +138,21 @@ def plot_faces(axd, surface_list, **kwargs):
                            + y_ring[i]*s["y_axis"]
                            + sag_ring[i]*s["z_axis"])
 
-            _axdPlot(x, axd, label, None, **kwargs)
+            _axdPlot(x, axd, label, s["color"], **kwargs)
 
             for i in range(npts):
                 x[i, :] = (s["origin"]
                            + bar[i]*s["x_axis"]
                            + sag_xbar[i]*s["z_axis"])
 
-            _axdPlot(x, axd, None, None, **kwargs)
+            _axdPlot(x, axd, None, s["color"], **kwargs)
 
             for i in range(npts):
                 x[i, :] = (s["origin"]
                            + bar[i]*s["y_axis"]
                            + sag_ybar[i]*s["z_axis"])
 
-            _axdPlot(x, axd, None, None, **kwargs)
+            _axdPlot(x, axd, None, s["color"], **kwargs)
     axd['fig'].tight_layout()
 
 
@@ -165,15 +166,17 @@ def plot_rays(axd, geometry, ray_table, color_by=None, **kwargs):
     '''
 
     keep = [s['draw_radius'] != 0 for s in geometry]
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     for i in range(ray_table.shape[1]):
         if color_by == 'field':
-            color = ray_table[0, i, 3, 0].astype(int)
+            icolor = ray_table[0, i, 3, 0].astype(int)
         elif color_by == 'pupil':
-            color = ray_table[0, i, 3, 1].astype(int)
+            icolor = ray_table[0, i, 3, 1].astype(int)
         elif color_by == 'wavelength':
-            color = ray_table[0, i, 3, 2].astype(int)
+            icolor = ray_table[0, i, 3, 2].astype(int)
         else:
-            color = None
+            icolor = None
         x = ray_table[:, i, 0, :][keep]
+        color = colors[icolor % len(colors)]
         _axdPlot(x, axd, 'x', color, **kwargs)
     return

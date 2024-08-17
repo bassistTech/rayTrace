@@ -9,6 +9,7 @@ import sympy as sp
 from time import time
 import os
 import yaml
+import matplotlib.pyplot as plt
 
 
 epsilon = 1e-4
@@ -173,6 +174,9 @@ def build_geometry(surface_list):
     def apply_defaults(d, defaults):
         return d | {k: defaults[k] for k in defaults if k not in d}
 
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    default_colors = prop_cycle.by_key()['color']
+
     geometry_defaults = {"dist": 0,
                          "draw": True,
                          "draw_radius": 10,
@@ -191,7 +195,9 @@ def build_geometry(surface_list):
 
     # Run through the surfaces, applying the coordinate basis to each surface
     geometry = []
-    for s in surface_list:
+    for i in range(len(surface_list)):
+        s = surface_list[i]
+        geometry_defaults['color'] = default_colors[i % len(default_colors)]
         g = apply_defaults(s, geometry_defaults)
         if g["surf"] == "conic":
             if g["R"] is not None:
@@ -225,7 +231,10 @@ def build_geometry(surface_list):
 
 
 help_ray_table = """
+    Help for ray table. The table is structured like this:
+
     ray_table[surf #, ray #, type #, data]
+
     type = 0
         data = intersection point of ray in space
     type = 1
@@ -234,8 +243,6 @@ help_ray_table = """
         data = [refractive index, wavelength, <reserved>]
     type = 3
         data = [field #, pupil #, wavelength #]
-    type = 4
-        data = [sag, ...]
     """
 
 
@@ -355,6 +362,38 @@ def new_ray_table(geometry, fields, pupils, wavls, infinite,
                                             ray_table[i, :, 2, 1])
 
     return ray_table
+
+def ray_table_fields_rings(geometry, max_field_degrees, number_of_fields, pupil_diameter_mm, number_of_rings, wavls):
+    """
+    Create a basic circular ray bundle. This is the most common type of ray bundle used for
+    general purpose ray tracing, so I created a function for it. 
+
+    geometry = geometry object representing your design
+    max_field_degrees = maximum field angle. Fields start from 0 to this angle.
+    number_of_fields = number of fields represented, which can be 1
+    pupil_diameter_mm = diameter of circular ray bundle in mm
+    number_of_rings = number of circular "rings" of rays
+    wavls = list of wavelengths, in mm, e.g., 633 nm is 0.000633 mm
+
+    Returns: Initialized ray table
+    """
+    fields = np.zeros((number_of_fields, 3))
+    fields[:, 0] = np.sqrt(np.linspace(0, max_field_degrees**2, number_of_fields))*np.pi/180
+    fields[:, 2] = np.ones(number_of_fields)
+    field_vectors = fields/np.sum(fields**2, axis = 1)[:, np.newaxis]
+
+    r_ring = np.linspace(0, pupil_diameter_mm/2, number_of_rings)
+    pupil_points = [[0, 0, 0]]
+    for i in range(1, number_of_rings):
+        r = r_ring[i]
+        for j in range(i*6):
+            theta = j*2*np.pi/i/6
+            pupil_points.append([r*np.sin(theta), r*np.cos(theta), 0])
+
+    infinite = True
+    aim_consts = np.zeros([6], dtype = float)
+
+    return new_ray_table(geometry, field_vectors, pupil_points, wavls, infinite, aim_consts)
 
 
 def propagate_dummy_surface(ray_table, geometry, surf):
