@@ -68,6 +68,6 @@ def merit_prepare(params, ray_table, surface_list):
     update_values(surface_list, params)
     geometry = rtt.build_geometry(surface_list)
     rtt.trace_rays(ray_table, geometry)
+    return geometry
 
-
-
+print('optimize loaded')

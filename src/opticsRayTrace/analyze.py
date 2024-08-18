@@ -52,3 +52,5 @@ def focal_length(geometry, beam_diameter_mm, wavelength_mm):
     test_position = spot_positions[1, 0]
     focal_length = test_position/test_angle
     return focal_length
+
+print('analyze loaded')

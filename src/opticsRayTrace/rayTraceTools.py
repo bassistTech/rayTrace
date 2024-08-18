@@ -10,6 +10,7 @@ from time import time
 import os
 import yaml
 import matplotlib.pyplot as plt
+import pickle
 
 
 epsilon = 1e-4
@@ -176,6 +177,7 @@ def build_geometry(surface_list):
 
     prop_cycle = plt.rcParams['axes.prop_cycle']
     default_colors = prop_cycle.by_key()['color']
+    default_catalog = "schott"
 
     geometry_defaults = {"dist": 0,
                          "draw": True,
@@ -183,6 +185,7 @@ def build_geometry(surface_list):
                          "draw_dx": 0,
                          "draw_dy": 0,
                          "mirror": False,
+                         "catalog": default_catalog,
                          "material": "vacuum",
                          "c": 0, "k": 0,
                          "R": None}
@@ -199,6 +202,7 @@ def build_geometry(surface_list):
         s = surface_list[i]
         geometry_defaults['color'] = default_colors[i % len(default_colors)]
         g = apply_defaults(s, geometry_defaults)
+        default_catalog = g["catalog"]
         if g["surf"] == "conic":
             if g["R"] is not None:
                 g['c'] = 1/g["R"]
@@ -206,7 +210,8 @@ def build_geometry(surface_list):
             g['glass_coeffs'] = np.array((0, 0, 0, 0, 0, 0))
         else:
             # For now, just use the 6 coefficient model, which only works for visible wavelengths.
-            g['glass_coeffs'] = load_glass(g['material'])['coeffs']
+            # g['glass_coeffs'] = load_glass(g['material'])['coeffs']
+            g['glass_coeffs'] = glass_list[g["catalog"]][g['material']]['coeffs']
         if g["surf"] == "rotate":
             x_axis = coord_rotate(x_axis, g["axis"], g["degrees"])
             y_axis = coord_rotate(y_axis, g["axis"], g["degrees"])
@@ -363,7 +368,12 @@ def new_ray_table(geometry, fields, pupils, wavls, infinite,
 
     return ray_table
 
-def ray_table_fields_rings(geometry, max_field_degrees, number_of_fields, pupil_diameter_mm, number_of_rings, wavls):
+default_aim_consts = np.zeros([6], dtype = float)
+
+def ray_table_fields_rings(geometry, 
+                           max_field_degrees, number_of_fields, 
+                           pupil_diameter_mm, number_of_rings, 
+                           wavls, aim_consts = default_aim_consts):
     """
     Create a basic circular ray bundle. This is the most common type of ray bundle used for
     general purpose ray tracing, so I created a function for it. 
@@ -391,10 +401,39 @@ def ray_table_fields_rings(geometry, max_field_degrees, number_of_fields, pupil_
             pupil_points.append([r*np.sin(theta), r*np.cos(theta), 0])
 
     infinite = True
-    aim_consts = np.zeros([6], dtype = float)
 
     return new_ray_table(geometry, field_vectors, pupil_points, wavls, infinite, aim_consts)
 
+def ray_table_fields_1d(geometry, 
+                           max_field_degrees, number_of_fields, 
+                           pupil_diameter_mm, number_of_pupils, 
+                           wavls, aim_consts = default_aim_consts):
+    """
+    Create a basic circular ray bundle. This is the most common type of ray bundle used for
+    general purpose ray tracing, so I created a function for it. 
+
+    geometry = geometry object representing your design
+    max_field_degrees = maximum field angle. Fields start from 0 to this angle.
+    number_of_fields = number of fields represented, which can be 1
+    pupil_diameter_mm = diameter of circular ray bundle in mm
+    number_of_rings = number of circular "rings" of rays
+    wavls = list of wavelengths, in mm, e.g., 633 nm is 0.000633 mm
+
+    Returns: Initialized ray table
+    """
+    fields = np.zeros((number_of_fields, 3))
+    fields[:, 0] = np.sqrt(np.linspace(0, max_field_degrees**2, number_of_fields))*np.pi/180
+    fields[:, 2] = np.ones(number_of_fields)
+    field_vectors = fields/np.sum(fields**2, axis = 1)[:, np.newaxis]
+
+    x_pupil = np.linspace(-pupil_diameter_mm/2, pupil_diameter_mm/2, number_of_pupils)
+
+    pupil_points = np.zeros([number_of_pupils, 3])
+    pupil_points[:, 0] = x_pupil
+
+    infinite = True
+
+    return new_ray_table(geometry, field_vectors, pupil_points, wavls, infinite, aim_consts)
 
 def propagate_dummy_surface(ray_table, geometry, surf):
     """
@@ -666,28 +705,43 @@ def print_ray_table(ray_table):
                   ray_table[s, r, 1, :],
                   ray_table[s, r, 2, 0:2])
 
+def create_glass_file():
+    """
+    The glasses take a long time to load from their original data files, so I turned
+    them into a pickle file. I doubt that the glasses are likely to change, and they
+    certainly won't unless you download new ones. So it's probably safe to run this
+    function only if you know that the data files have changed for some reason,
+    or you want to add more catalogs to my list.
 
-"""
-Glass data is from this site:
+    Glass data is from this site:
 
-M. N. Polyanskiy, "Refractive index database," https://refractiveindex.info. Accessed on 2023-11-07.
-"""
-default_glass_root = os.path.dirname(os.path.abspath(__file__)) + '/database/data-nk/'
-default_glass_catalog = 'glass/schott/'
+    M. N. Polyanskiy, "Refractive index database," https://refractiveindex.info. Accessed on 2023-11-07.
+    """
 
+    default_glass_root = os.path.dirname(os.path.abspath(__file__)) + '/database/data-nk/'
+    # default_glass_catalog = 'glass/schott/'
 
-def load_glass(glass, root=default_glass_root, catalog=default_glass_catalog):
-    if root is None:
-        root = default_glass_root
-    if catalog is None:
-        catalog = default_glass_catalog
-    filename = root + catalog + glass + '.yml'
-    data = yaml.load(open(filename, 'r'), yaml.Loader)
-    return {'coeffs': list(map(float, data['DATA'][0]['coefficients'].split()[1:]))}
+    glass_list = {}
+    root_path = os.path.join(default_glass_root, 'glass')
+    glass_catalogs = ['schott', 'hikari', 'hoya', 'ohara', 'sumita']
+    for catalog in glass_catalogs:
+        print(catalog)
+        glass_list[catalog] = {}
+        path = os.path.join(root_path, catalog)
+        for filename in os.listdir(path):
+            if filename.endswith('.yml'):
+                glass = filename.split('.')[-2]
+                data = yaml.load(open(os.path.join(path, filename), 'r'), yaml.Loader)
+                coeffs = list(map(float, data['DATA'][0]['coefficients'].split()[1:]))
+                glass_list[catalog][glass] = {'coeffs': coeffs}
+    pickle.dump(glass_list, open('glass_list.pickle', 'wb'))
 
+glass_list = pickle.load(open('glass_list.pickle', 'rb'))
 
 def glass_index(coeffs, mm):
     microns = mm*1000
     b1, c1, b2, c2, b3, c3 = coeffs
     l2 = microns**2
     return np.sqrt(1 + b1*l2/(l2 - c1) + b2*l2/(l2 - c2) + b3*l2/(l2 - c3))
+
+print('rayTraceTools loaded')

@@ -180,3 +180,5 @@ def plot_rays(axd, geometry, ray_table, color_by=None, **kwargs):
         color = colors[icolor % len(colors)]
         _axdPlot(x, axd, 'x', color, **kwargs)
     return
+
+print('drawing loaded')

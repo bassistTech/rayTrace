@@ -6,9 +6,9 @@ Francis Deck, 8-17-2024
 
 *If you were searching for the kind of "ray tracing" used in computer graphics, you came to the wrong place*.
 
-This is ray tracing for modeling and analyzing optical designs such as lenses, mirrors, and gratings. The math is similar, but computer graphics optimize for speed, and optics design optimizes for accuracy.
+This is ray tracing for modeling and analyzing optical designs such as lenses, mirrors, and gratings. The math is similar, but computer graphics optimizes for speed, and optics design optimizes for accuracy.
 
-If you're a beginner at Python, using this package will be a challenge, but it also might be a great way to learn Python. If you're new at both optics and Python, prepare for a steeper learning curve, but have fun.
+If you're a beginner at Python, using this package will be a challenge, but it also might be a good way to learn Python. If you're new at both optics and Python, prepare for a steeper learning curve, but have fun.
 
 ## Purpose
 
@@ -27,7 +27,7 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 * Plane diffraction grating
 * Coordinate breaks
 * Crude ray aiming
-* Optimization is crude but improving
+* Optimization is crude but works
 
 ## Immediate plans
 
@@ -38,7 +38,7 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 ## Non plans
 
 * Any kind of GUI or general purpose "software."
-* Turning this into an optics textbook. That's too much, and there are good textbooks.
+* Turning this into an optics textbook. That's too much, and there are already good textbooks.
 
 ## My evaluation so far
 
@@ -52,6 +52,8 @@ Since I use one of the "big" commercial packages at my day job, it's easy to ide
 
 * Worth asking: Are these features necessary, or are the commercial packages just bloated? My experience is that when you run into an interesting obstacle or problem, it's useful to look through the lists of operands for one that does exactly what you need. This is comparable to programmers having access to huge libraries.
 
+* Using my package still requires proficiency in Python. In my opinion, nobody has come up with a "no code" or even "low code" free alternative to the big commercial packages.
+
 ## Overview of contents
 
 **Entire repo** can be installed as a Python package on your machine using:
@@ -62,25 +64,29 @@ Since I use one of the "big" commercial packages at my day job, it's easy to ide
 
 The **-e** flag causes **pip** to install the package without moving it into your Python directory, so you can keep editing all of the files. I'd be surprised if you could use my package right now for anything interesting without modifying it, so it doesn't really belong in your *site-packages*.
 
-**Docs** are notebooks that document the theory and evolution of the program, but are not meant for long term use, and are not kept up to date with changes to the library. You can think of these notebooks as my lab notebooks, through which I developed the primitive code. **rayTraceSlow.ipynb** was the original notebook, but is written in mostly bare Python, so it's slow, but perhaps easier to read. The transition to array math using numpy can be a bit abrupt for a beginning programmer. **rayTrace.ipynb** is more or less the same program, but shows the transition to numpy.
+**Docs** are notebooks that document the theory and evolution of the program, but are not meant for long term use, and are not kept up to date with changes to the library.
 
 **Notebooks** are projects and tests using the Python package.
 
 **Tutorials** are projects intended to walk you through using the package, step by step.
 
+**Tests** are my own notebooks for verifying that I haven't broken anything.
+
 ## Coding style
 
-My code largely avoids object-oriented programming, which I've used extensively in a lot of projects. For this project my impression is that OOP is simply unnecessary. Python data objects are a way to encapsulate complicated type systems, but so are **dict** objects. And we just don't have a large number of different kinds of structures: For now just surfaces and rays. What you can't do with a **dict** is have the code profiler tell you if you've mis-named a parameter.
+My code largely avoids object-oriented programming, which I've used extensively in a lot of projects. For this project my impression is that OOP is simply unnecessary. To be sure, Python data objects are a way to encapsulate complicated type systems, but so are **dict** objects. And we just don't have a large number of different kinds of structures: For now just surfaces and rays. What you can't do with a **dict** is have the code profiler tell you if you've mis-named a parameter. Objects are a way to manage programs that require many layers of abstraction, but this program is pretty flat. Most of the operations are only a couple layers deep: The basic surfaces and rays, and functions that operate on those things. Also, objects come into play when you start building a GUI, which I don't plan on doing.
 
-**Surfaces** are specified in a traditional fashion, but using a **dict** structure instead of a tabular editor. The **dict** gives the flexibility to have special parameters for each surface, such as the particular features of a grating.
+**Surfaces** are specified in a traditional fashion, but using a **dict** structure instead of a tabular editor. A **dict** gives the flexibility to have special parameters for each surface, such as the particular features of a grating.
 
-Surfaces are turned into a **geometry**, which locates each surfaces within a global coordinate system while giving each surface its own local coordinate axis. It is exactly the same **dict** structure with more parameters.
+Surfaces are turned into a **geometry**, which locates each surface within a global coordinate system. It is exactly the same **dict** structure with more parameters. Generating the geometry from a basic surface list hides the complexity of managing the coordinate system, which is error prone if you have to do it by hand.
 
-**Rays** are represented by a big multi-dimensional Numpy array. Two "columns" of the array are for the intersection point and direction vector (in global coordinates) of each ray. Additional "columns" track additional properties of the rays, including wavelength. This is kind of an abuse of of the array structure, but makes for quick computation. On the other hand, if it's not really speeding things up (which I intend to find out), then I'll create a cleaner structure.
+**Rays** are represented by a big multi-dimensional **Numpy** array. Two "columns" of the array are for the intersection point and direction vector (in global coordinates) of each ray. Additional "columns" track properties of the rays, including wavelength. This is kind of an abuse of of the array structure, but makes for quick computation. On the other hand, if it's not really speeding things up (which I intend to find out), then I'll create a cleaner structure.
 
 The ray list is passed into functions, and modified in place. This is not functional programming, but seems appropriate for the typical analysis workflow. In any event, an equivalent C program would do the same thing, since a C function can't return an object.
 
 An interesting bit of trivia is that Python is highly optimized for fast access of **dict** structures. I've got them in the inner loops of my ray tracing code, and my tests have shown that there's no speed penalty.
+
+I think I've made effective use of **Numpy**, but it could always improve. I've tested a number of further improvements, most of which produce little or no gain at the expense of readability. That's not worthwhile for me, because I don't want my code to be opaque to critique. I spent some time converting my code to work with **Numba**. Once again, little or no improvement, and the code became pretty baroque.
 
 ## Bibliography of existing packages
 
@@ -105,3 +111,5 @@ https://tmurphy.physics.ucsd.edu/astr597/exercises/raytrace-3d.pdf has a closed 
 ## Other references
 
 https://raytracing.github.io/books/RayTracingInOneWeekend.html is a book on ray tracing, for computer graphics. I'll be looking through it for insights on how I could speed up my program, since graphics tend to be quite performance intensive.
+
+https://refractiveindex.info is where I got my glass catalog.
