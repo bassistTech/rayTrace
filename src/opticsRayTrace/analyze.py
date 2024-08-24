@@ -11,8 +11,8 @@ def rms_by_field_xy(ray_table, index = -1):
     Returns: rms[field_number, axis]
     '''
     
-    rayx = ray_table[index, :, 0, 0]
-    rayy = ray_table[index, :, 0, 1]
+    rayx = ray_table[index, :, 4, 0]
+    rayy = ray_table[index, :, 4, 1]
     rayfields = ray_table[-1, :, 3, 0].astype(int)
     return np.array([[np.std(rayx[rayfields == f]), np.std(rayy[rayfields == f])] 
                      for f in np.arange(np.max(rayfields) + 1)])
@@ -36,8 +36,8 @@ def average_by_field_xy(ray_table, index = -1):
     Returns: rms[field_number, axis]
     '''
     
-    rayx = ray_table[index, :, 0, 0]
-    rayy = ray_table[index, :, 0, 1]
+    rayx = ray_table[index, :, 4, 0]
+    rayy = ray_table[index, :, 4, 1]
     rayfields = ray_table[-1, :, 3, 0].astype(int)
     return np.array([[np.average(rayx[rayfields == f]), np.average(rayy[rayfields == f])] 
                      for f in np.arange(np.max(rayfields) + 1)])

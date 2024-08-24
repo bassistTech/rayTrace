@@ -12,7 +12,7 @@ If you're a beginner at Python, using this package will be a challenge, but it a
 
 ## Purpose
 
-This project started as a learning exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. And then, test my understanding by coding it and see if it works. In the future, I might use it to try out some unconventional design ideas for fun.
+This project started as a learning exercise, to see if I could gather and document the formulas needed for optical ray tracing, and demonstrate some basic applications in a Jupyter notebook. In the future, I might use it to try out some unconventional design ideas for fun.
 
 At some point it became obvious that keeping all of the code in notebooks was awkward. I moved the "guts" of the ray tracing code to a more traditional Python package.
 
@@ -90,7 +90,7 @@ I think I've made effective use of **Numpy**, but it could always improve. I've 
 
 ## Bibliography of existing packages
 
-No Python package is worth starting unless there's a perfectly good package that already exists. ;-) That's why there are half a million packages. Anyway, here are some other packages worth looking into:
+No Python package is worth starting unless there's a perfectly good package that already exists. That's why there are half a million packages. Anyway, here are some other packages worth looking into:
 
 https://github.com/Garchupiter/Kraken-Optical-Simulator is another Python ray tracing library. It strives for accuracy, and handles a reasonable range of design options. But it suffers from the same drawback as my package: Getting the ray tracing engine working is easy. Doing anything useful with the rays requires a lot of Python programming.
 
@@ -106,9 +106,9 @@ https://github.com/rfrazier716/PyRayT looks promising, but is preliminary. I'm g
 
 https://github.com/chbergmann/OpticsWorkbench is a ray tracing add-on for FreeCAD. I haven't explored it at all, but I like the concept.
 
-https://tmurphy.physics.ucsd.edu/astr597/exercises/raytrace-3d.pdf has a closed form solution for the intersection of a ray and a conic section surface, with Python example code.
-
 ## Other references
+
+https://tmurphy.physics.ucsd.edu/astr597/exercises/raytrace-3d.pdf has a closed form solution for the intersection of a ray and a conic section surface, with Python example code.
 
 https://raytracing.github.io/books/RayTracingInOneWeekend.html is a book on ray tracing, for computer graphics. I'll be looking through it for insights on how I could speed up my program, since graphics tend to be quite performance intensive.
 
