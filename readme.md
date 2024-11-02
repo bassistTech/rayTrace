@@ -6,7 +6,7 @@ Francis Deck, 8-17-2024
 
 *If you were searching for the kind of "ray tracing" used in computer graphics, you came to the wrong place*.
 
-This is ray tracing for modeling and analyzing optical designs such as lenses, mirrors, and gratings. The math is similar, but computer graphics optimizes for speed, and optics design optimizes for accuracy.
+This is ray tracing for modeling and analyzing optical designs such as lenses, mirrors, and gratings. Hopefully it's the same physics. The math should be similar, but computer graphics optimizes for speed, and optics design optimizes for accuracy. I've looked in both optics and graphics literature for useful formulas.
 
 If you're a beginner at Python, using this package will be a challenge, but it also might be a good way to learn Python. If you're new at both optics and Python, prepare for a steeper learning curve, but have fun.
 
@@ -20,6 +20,8 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 
 ## What it does so far
 
+I think I've gotten this to the point where I could use it for real designs, *provided that I extend the package with more Python code when I run into a roadblock*. 
+
 * "Standard" conic section surface, which includes the spherical surface, and a cylindrical version
 * "Paraxial" surface
 * Refractive materials (glasses) and mirrors
@@ -29,24 +31,18 @@ I'm not trying to supplant commercial design software such as Zemax, Oslo, etc. 
 * Crude ray aiming
 * Optimization is crude but works
 
-## Immediate plans
+## What it doesn't do
 
-* Demonstrate more stuff
-* Make breaking changes!
-* As useful "features" emerge, move them out of the notebooks and into the Python library.
-
-## Non plans
-
-* Any kind of GUI or general purpose "software."
+* I draw the line at creating any kind of GUI or general purpose "software." My reason is that doing so increases the size and complexity of the project, exponentially.
 * Turning this into an optics textbook. That's too much, and there are already good textbooks.
 
 ## My evaluation so far
 
-Since I use one of the "big" commercial packages at my day job, it's easy to identify pro's and con's versus my own code. The commercial packages still have some outstanding advantages that would be hard to live without:
+Since I use one of the "big" commercial packages at my day job, it's easy to identify pro's and con's versus my own code. The commercial packages still have some outstanding advantages that would be hard to live without, either for commercial design or education:
 
 * Computation speed, when it's necessary to analyze lots of rays.
 
-* My program doesn't handle configurations, tolerance analysis, thermal design, CAD output...
+* My program doesn't handle configurations, tolerance analysis, thermal design, CAD output... The list goes on and on.
 
 * Proliferation of features. The sheer number of these features embodies years of effort. Some of them incorporate domain knowledge that I don't possess, either because it's proprietary or I haven't learned it yet. If you want to add them to my package, you have to program them yourself.
 
@@ -74,11 +70,15 @@ The **-e** flag causes **pip** to install the package without moving it into you
 
 ## Coding style
 
-My code largely avoids object-oriented programming, which I've used extensively in a lot of projects. For this project my impression is that OOP is simply unnecessary. To be sure, Python data objects are a way to encapsulate complicated type systems, but so are **dict** objects. And we just don't have a large number of different kinds of structures: For now just surfaces and rays. What you can't do with a **dict** is have the code profiler tell you if you've mis-named a parameter. Objects are a way to manage programs that require many layers of abstraction, but this program is pretty flat. Most of the operations are only a couple layers deep: The basic surfaces and rays, and functions that operate on those things. Also, objects come into play when you start building a GUI, which I don't plan on doing.
+I've used object-oriented programming (OOP) in a lot of projects, but this project doesn't use it. Objects can do a couple of things:
 
-**Surfaces** are specified in a traditional fashion, but using a **dict** structure instead of a tabular editor. A **dict** gives the flexibility to have special parameters for each surface, such as the particular features of a grating.
+1. Encapsulate complicated data structures, while allowing the compiler (or code profiler) to detect incorrect uses. But we don't have a large number of structures: For now, just surfaces and rays. These are easily expressed as **dict**s and a big Numpy array.
 
-Surfaces are turned into a **geometry**, which locates each surface within a global coordinate system. It is exactly the same **dict** structure with more parameters. Generating the geometry from a basic surface list hides the complexity of managing the coordinate system, which is error prone if you have to do it by hand.
+2. Manage projects requiring many layers of abstraction, particularly GUIs. But this package is pretty flat. Most of the operations are only a couple of layers deep. I want to keep it that way.
+
+**Surfaces** are specified in a traditional fashion, but using a **dict** structure instead of a tabular editor. A **dict** allows the list of surfaces to be *inhomogeneous*. What I mean is, each surface in the list can have properties specific to its surface type, such as conic, cylindrical, grating, etc.
+
+**Geometry** is the same list of surfaces, but each surface gets more properties such as its location and orientation within a global coordinate system.
 
 **Rays** are represented by a big multi-dimensional **Numpy** array. Two "columns" of the array are for the intersection point and direction vector (in global coordinates) of each ray. Additional "columns" track properties of the rays, including wavelength. This is kind of an abuse of of the array structure, but makes for quick computation. On the other hand, if it's not really speeding things up (which I intend to find out), then I'll create a cleaner structure.
 
@@ -86,7 +86,7 @@ The ray list is passed into functions, and modified in place. This is not functi
 
 An interesting bit of trivia is that Python is highly optimized for fast access of **dict** structures. I've got them in the inner loops of my ray tracing code, and my tests have shown that there's no speed penalty.
 
-I think I've made effective use of **Numpy**, but it could always improve. I've tested a number of further improvements, most of which produce little or no gain at the expense of readability. That's not worthwhile for me, because I don't want my code to be opaque to critique. I spent some time converting my code to work with **Numba**. Once again, little or no improvement, and the code became pretty baroque.
+I think I've made effective use of **Numpy**, but it could always improve. I've tested a number of further improvements, most of which produce little or no gain at the expense of readability. Tiny gains are not worthwhile for me, because I don't want my code to be opaque to critique. I spent some time converting my code to work with **Numba**. Once again, little or no improvement, and the code became pretty barbarous.
 
 ## Bibliography of existing packages
 

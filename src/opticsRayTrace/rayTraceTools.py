@@ -5,12 +5,13 @@ MIT License
 '''
 
 import numpy as np
-import sympy as sp
+# import sympy as sp
 from time import time
 import os
 import yaml
 import matplotlib.pyplot as plt
 import pickle
+from dataclasses import dataclass
 
 
 epsilon = 1e-8
@@ -56,7 +57,10 @@ sag_conic_sp = c*r**2/(1 + sp.sqrt(1 - (1 + k)*c**2*r**2))
 sag_conic_diff_sp = sp.simplify(sp.diff(sag_conic_sp, r)/r)
 
 sag_conic = sp.lambdify([r, c, k], sag_conic_sp, 'numpy')
-sag_conic_diff = sp.lambdify([r, c, k], sag_conic_diff_sp, 'numpy')'''
+sag_conic_diff = sp.lambdify([r, c, k], sag_conic_diff_sp, 'numpy')
+
+After I let sympy generate the sag_conic_diff function, I simplified it by hand
+'''
 
 def sag_conic(r, c, k):
     return c*r**2/(np.sqrt(-c**2*r**2*(k + 1) + 1) + 1)
@@ -131,7 +135,7 @@ def rotate_matrix(axis, alpha_deg):
     alpha = alpha_deg * np.pi / 180
     a, b, c = axis
     ca = np.cos(alpha)
-    sa = np.sin(alpha)
+    sa = -np.sin(alpha)
     K = 1 - ca
     return np.array(
         [
@@ -139,7 +143,7 @@ def rotate_matrix(axis, alpha_deg):
             [a * b * K + c * sa,  b**2 * K + ca,       b * c * K - a * sa],
             [a * c * K - b * sa,  b * c * K + a * sa,  c**2 * K + ca],
         ]
-    ).T
+    )
 
 
 def coord_rotate(v, axis, alpha_deg):
@@ -150,7 +154,7 @@ def coord_rotate(v, axis, alpha_deg):
     alpha:deg = Amount of rotation in degrees
     '''
     M = rotate_matrix(axis, alpha_deg)
-    return np.matmul(M, v)
+    return np.dot(M, v)
 
 
 def coord_shift(x, dx):
@@ -202,6 +206,7 @@ def build_geometry(surface_list):
         s = surface_list[i]
         geometry_defaults['color'] = default_colors[i % len(default_colors)]
         g = apply_defaults(s, geometry_defaults)
+
         # When a catalog is chosen, it becomes the default for subsequent surfaces
         default_catalog = g["catalog"]
         if g["surf"] == "conic":
@@ -214,11 +219,11 @@ def build_geometry(surface_list):
             # g['glass_coeffs'] = load_glass(g['material'])['coeffs']
             g['glass_coeffs'] = glass_list[g["catalog"]][g['material']]['coeffs']
         if g["surf"] == "rotate":
-            basis = np.matmul(basis, rotate_matrix(g["axis"], g["degrees"]))
+            basis = np.dot(basis, rotate_matrix(g["axis"], g["degrees"]))
         elif g["surf"] == "shift":
             origin = coord_shift(
                 origin,
-                np.matmul(basis, g["delta"])
+                np.dot(basis, g["delta"])
             )
         # Apply the new coordinates to the current surface
         g["origin"] = np.array(origin)
@@ -364,8 +369,6 @@ def new_ray_table(geometry, fields, pupils, wavls, infinite,
                                             ray_table[i, :, 2, 1])
 
     return ray_table
-
-default_aim_consts = np.zeros([6], dtype = float)
 
 def ray_table_fields_rings(geometry, 
                            max_field_degrees, number_of_fields, 
@@ -587,6 +590,7 @@ def propagate_plane_grating(ray_table, geometry, surf):
     ray_table[ex, :, 1, :] = (np.outer(exx, surface["basis"][0])
                               + np.outer(exy, surface["basis"][1])
                               + np.outer(exz, surface["basis"][2]))
+    ray_table[surf, :, 4, :] = np.dot(ray_table[surf, :, 0, :] - surface["origin"], surface["basis"])
 
 
 def propagate_plane_grating_2(ray_table, geometry, surf):
@@ -631,6 +635,7 @@ def propagate_plane_grating_2(ray_table, geometry, surf):
     ray_table[ex, :, 1, :] = (np.outer(exx, surface["basis"][0])
                               + np.outer(exy, surface["basis"][1])
                               + np.outer(exz, surface["basis"][2]))
+    ray_table[surf, :, 4, :] = np.dot(ray_table[surf, :, 0, :] - surface["origin"], surface["basis"])
 
 
 def propagate_paraxial(ray_table, geometry, surf):
@@ -661,6 +666,7 @@ def propagate_paraxial(ray_table, geometry, surf):
     # point each outgoing ray to its corresponding focal point
 
     ray_table[surf, :, 1, :] = normalize_vec_array(focal_points - ray_table[surf, :, 0, :])
+    ray_table[surf, :, 4, :] = np.dot(ray_table[surf, :, 0, :] - surface["origin"], surface["basis"])
 
 
 def trace_rays(ray_table, geometry):
